@@ -58,6 +58,8 @@ import org.thingsboard.server.service.security.auth.oauth2.HttpCookieOAuth2Autho
 import org.thingsboard.server.service.security.auth.rest.RestAuthenticationProvider;
 import org.thingsboard.server.service.security.auth.rest.RestLoginProcessingFilter;
 import org.thingsboard.server.service.security.auth.rest.RestPublicLoginProcessingFilter;
+import org.thingsboard.server.service.security.auth.kerberos.KerberosAuthenticationProvider;
+import org.thingsboard.server.service.security.auth.kerberos.KerberosLoginProcessingFilter;
 import org.thingsboard.server.transport.http.config.PayloadSizeFilter;
 
 import java.util.ArrayList;
@@ -78,6 +80,7 @@ public class ThingsboardSecurityConfiguration {
     public static final String DEVICE_API_ENTRY_POINT = "/api/v1/**";
     public static final String FORM_BASED_LOGIN_ENTRY_POINT = "/api/auth/login";
     public static final String PUBLIC_LOGIN_ENTRY_POINT = "/api/auth/login/public";
+    public static final String KERBEROS_LOGIN_ENTRY_POINT = "/api/auth/kerberos";
     public static final String TOKEN_REFRESH_ENTRY_POINT = "/api/auth/token";
     protected static final String[] NON_TOKEN_BASED_AUTH_ENTRY_POINTS = new String[]{"/index.html", "/assets/**", "/static/**", "/api/noauth/**", "/webjars/**", "/api/license/**", "/api/images/public/**", "/.well-known/**"};
     public static final String TOKEN_BASED_AUTH_ENTRY_POINT = "/api/**";
@@ -116,6 +119,8 @@ public class ThingsboardSecurityConfiguration {
     private JwtAuthenticationProvider jwtAuthenticationProvider;
     @Autowired
     private RefreshTokenAuthenticationProvider refreshTokenAuthenticationProvider;
+    @Autowired(required = false)
+    private KerberosAuthenticationProvider kerberosAuthenticationProvider;
 
     @Autowired(required = false)
     OAuth2Configuration oauth2Configuration;
@@ -163,10 +168,17 @@ public class ThingsboardSecurityConfiguration {
         return filter;
     }
 
+    @Bean
+    protected KerberosLoginProcessingFilter buildKerberosLoginProcessingFilter() throws Exception {
+        KerberosLoginProcessingFilter filter = new KerberosLoginProcessingFilter(KERBEROS_LOGIN_ENTRY_POINT, successHandler, failureHandler);
+        filter.setAuthenticationManager(this.authenticationManager);
+        return filter;
+    }
+
     protected JwtTokenAuthenticationProcessingFilter buildJwtTokenAuthenticationProcessingFilter() throws Exception {
         List<String> pathsToSkip = new ArrayList<>(Arrays.asList(NON_TOKEN_BASED_AUTH_ENTRY_POINTS));
         pathsToSkip.addAll(Arrays.asList(WS_ENTRY_POINT, TOKEN_REFRESH_ENTRY_POINT, FORM_BASED_LOGIN_ENTRY_POINT,
-                PUBLIC_LOGIN_ENTRY_POINT, DEVICE_API_ENTRY_POINT, MAIL_OAUTH2_PROCESSING_ENTRY_POINT,
+                PUBLIC_LOGIN_ENTRY_POINT, KERBEROS_LOGIN_ENTRY_POINT, DEVICE_API_ENTRY_POINT, MAIL_OAUTH2_PROCESSING_ENTRY_POINT,
                 DEVICE_CONNECTIVITY_CERTIFICATE_DOWNLOAD_ENTRY_POINT));
         SkipPathRequestMatcher matcher = new SkipPathRequestMatcher(pathsToSkip, TOKEN_BASED_AUTH_ENTRY_POINT);
         JwtTokenAuthenticationProcessingFilter filter
@@ -184,11 +196,17 @@ public class ThingsboardSecurityConfiguration {
 
     @Bean
     public AuthenticationManager authenticationManager() {
-        return new ProviderManager(List.of(
-                restAuthenticationProvider,
-                jwtAuthenticationProvider,
-                refreshTokenAuthenticationProvider
-        ));
+        List<org.springframework.security.authentication.AuthenticationProvider> providers = new ArrayList<>();
+        providers.add(restAuthenticationProvider);
+        providers.add(jwtAuthenticationProvider);
+        providers.add(refreshTokenAuthenticationProvider);
+        
+        // Add Kerberos authentication provider if enabled
+        if (kerberosAuthenticationProvider != null) {
+            providers.add(kerberosAuthenticationProvider);
+        }
+        
+        return new ProviderManager(providers);
     }
 
     @Autowired
@@ -223,6 +241,7 @@ public class ThingsboardSecurityConfiguration {
                         .requestMatchers(
                                 FORM_BASED_LOGIN_ENTRY_POINT, // Login end-point
                                 PUBLIC_LOGIN_ENTRY_POINT, // Public login end-point
+                                KERBEROS_LOGIN_ENTRY_POINT, // Kerberos login end-point
                                 TOKEN_REFRESH_ENTRY_POINT, // Token refresh end-point
                                 MAIL_OAUTH2_PROCESSING_ENTRY_POINT, // Mail oauth2 code processing url
                                 DEVICE_CONNECTIVITY_CERTIFICATE_DOWNLOAD_ENTRY_POINT, // Device connectivity certificate (public)
@@ -234,7 +253,14 @@ public class ThingsboardSecurityConfiguration {
                 .addFilterBefore(buildRestPublicLoginProcessingFilter(), UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(buildJwtTokenAuthenticationProcessingFilter(), UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(buildRefreshTokenProcessingFilter(), UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(payloadSizeFilter(), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(payloadSizeFilter(), UsernamePasswordAuthenticationFilter.class);
+        
+        // Add Kerberos filter if provider is available
+        if (kerberosAuthenticationProvider != null) {
+            http.addFilterBefore(buildKerberosLoginProcessingFilter(), UsernamePasswordAuthenticationFilter.class);
+        }
+        
+        http
                 .addFilterAfter(rateLimitProcessingFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(authExceptionHandler, buildRestLoginProcessingFilter().getClass());
         if (oauth2Configuration != null) {

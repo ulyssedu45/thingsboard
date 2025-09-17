@@ -161,6 +161,17 @@ security:
   basic:
     # Enable/Disable basic security options
     enabled: "${SECURITY_BASIC_ENABLED:false}"
+  kerberos:
+    # Enable/Disable Kerberos authentication
+    enabled: "${SECURITY_KERBEROS_ENABLED:false}"
+    # Kerberos service principal name
+    service-principal: "${SECURITY_KERBEROS_SERVICE_PRINCIPAL:HTTP/localhost@REALM.COM}"
+    # Path to the keytab file containing the service principal credentials
+    keytab-location: "${SECURITY_KERBEROS_KEYTAB_LOCATION:/etc/krb5.keytab}"
+    # Kerberos realm
+    realm: "${SECURITY_KERBEROS_REALM:REALM.COM}"
+    # KDC (Key Distribution Center) hostname
+    kdc: "${SECURITY_KERBEROS_KDC:localhost}"
   oauth2:
     # Redirect URL where access code from external user management system will be processed
     loginProcessingUrl: "${SECURITY_OAUTH2_LOGIN_PROCESSING_URL:/login/oauth2/code/}"
