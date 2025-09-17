@@ -22,8 +22,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.security.kerberos.authentication.sun.SunJaasKerberosClient;
 import org.springframework.security.kerberos.authentication.sun.SunJaasKerberosTicketValidator;
-import org.springframework.security.kerberos.web.authentication.SpnegoAuthenticationProcessingFilter;
-import org.springframework.security.kerberos.web.authentication.SpnegoEntryPoint;
 import org.thingsboard.server.queue.util.TbCoreComponent;
 
 @Configuration
@@ -57,17 +55,5 @@ public class KerberosConfiguration {
         SunJaasKerberosClient client = new SunJaasKerberosClient();
         client.setDebug(true);
         return client;
-    }
-
-    @Bean
-    public SpnegoEntryPoint spnegoEntryPoint() {
-        return new SpnegoEntryPoint("/api/auth/kerberos");
-    }
-
-    @Bean
-    public SpnegoAuthenticationProcessingFilter spnegoAuthenticationProcessingFilter() {
-        SpnegoAuthenticationProcessingFilter filter = new SpnegoAuthenticationProcessingFilter();
-        filter.setAuthenticationManager(null); // Will be set later
-        return filter;
     }
 }

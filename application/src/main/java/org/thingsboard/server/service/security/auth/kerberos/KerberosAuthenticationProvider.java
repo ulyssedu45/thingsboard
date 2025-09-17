@@ -17,6 +17,7 @@ package org.thingsboard.server.service.security.auth.kerberos;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
@@ -40,6 +41,7 @@ import org.thingsboard.server.service.security.system.SystemSecurityService;
 @Component
 @Slf4j
 @TbCoreComponent
+@ConditionalOnProperty(prefix = "security.kerberos", name = "enabled", havingValue = "true")
 public class KerberosAuthenticationProvider implements AuthenticationProvider {
 
     private final UserService userService;
