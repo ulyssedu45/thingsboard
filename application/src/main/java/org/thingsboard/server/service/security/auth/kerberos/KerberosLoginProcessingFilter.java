@@ -36,6 +36,9 @@ import org.thingsboard.server.service.security.exception.AuthMethodNotSupportedE
 
 import java.io.IOException;
 import java.util.Base64;
+import javax.security.auth.Subject;
+import org.ietf.jgss.*;
+import java.security.PrivilegedAction;
 
 @Slf4j
 public class KerberosLoginProcessingFilter extends AbstractAuthenticationProcessingFilter {
@@ -63,23 +66,30 @@ public class KerberosLoginProcessingFilter extends AbstractAuthenticationProcess
             throw new AuthMethodNotSupportedException("Authentication method not supported");
         }
 
-        // Check for Negotiate header
+        // Check for Negotiate header (SPNEGO authentication)
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Negotiate ")) {
             return handleNegotiateAuthentication(request, authHeader);
         }
 
         // Handle JSON-based Kerberos login request
+        return handleJsonAuthentication(request);
+    }
+
+    private Authentication handleJsonAuthentication(HttpServletRequest request) throws IOException {
         KerberosLoginRequest loginRequest;
         try {
             loginRequest = JacksonUtil.fromReader(request.getReader(), KerberosLoginRequest.class);
         } catch (Exception e) {
+            log.error("Failed to parse Kerberos login request", e);
             throw new AuthenticationServiceException("Invalid Kerberos login request payload");
         }
 
         if (!StringUtils.hasText(loginRequest.getUsername()) || !StringUtils.hasText(loginRequest.getKerberosToken())) {
             throw new AuthenticationServiceException("Username or Kerberos token not provided");
         }
+
+        log.debug("Processing JSON-based Kerberos authentication for user: {}", loginRequest.getUsername());
 
         KerberosAuthenticationToken token = new KerberosAuthenticationToken(
             loginRequest.getUsername(), 
@@ -91,27 +101,69 @@ public class KerberosLoginProcessingFilter extends AbstractAuthenticationProcess
 
     private Authentication handleNegotiateAuthentication(HttpServletRequest request, String authHeader) {
         try {
-            // Extract Kerberos token from Negotiate header
-            String token = authHeader.substring("Negotiate ".length());
-            byte[] kerberosToken = Base64.getDecoder().decode(token);
+            log.debug("Processing SPNEGO authentication with Negotiate header");
             
-            // For SPNEGO authentication, we would typically extract the username from the token
-            // For simplicity, we'll use a placeholder approach here
+            // Extract Kerberos token from Negotiate header
+            String encodedToken = authHeader.substring("Negotiate ".length()).trim();
+            byte[] kerberosToken = Base64.getDecoder().decode(encodedToken);
+            
+            // Extract username from the SPNEGO token
             String username = extractUsernameFromToken(kerberosToken);
             
-            KerberosAuthenticationToken authToken = new KerberosAuthenticationToken(username, token);
+            log.debug("Extracted username from SPNEGO token: {}", username);
+            
+            KerberosAuthenticationToken authToken = new KerberosAuthenticationToken(username, encodedToken);
             authToken.setDetails(authenticationDetailsSource.buildDetails(request));
             return this.getAuthenticationManager().authenticate(authToken);
             
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid Base64 encoding in Negotiate header", e);
+            throw new AuthenticationServiceException("Invalid token format in Negotiate header", e);
         } catch (Exception e) {
+            log.error("Failed to process Negotiate authentication", e);
             throw new AuthenticationServiceException("Failed to process Negotiate authentication", e);
         }
     }
 
     private String extractUsernameFromToken(byte[] kerberosToken) {
-        // In a real implementation, this would parse the Kerberos token to extract the principal
-        // For now, we'll return a placeholder that can be configured
-        return "kerberos-user";
+        try {
+            // Create GSS context to process the SPNEGO token
+            GSSManager manager = GSSManager.getInstance();
+            
+            // Set up the service principal (this should match the configured service principal)
+            Oid krb5Oid = new Oid("1.2.840.113554.1.2.2"); // Kerberos v5 OID
+            Oid spnegoOid = new Oid("1.3.6.1.5.5.2"); // SPNEGO OID
+            
+            GSSCredential serverCredentials = manager.createCredential(null,
+                    GSSCredential.INDEFINITE_LIFETIME,
+                    new Oid[] { krb5Oid, spnegoOid },
+                    GSSCredential.ACCEPT_ONLY);
+            
+            GSSContext context = manager.createContext(serverCredentials);
+            
+            // Process the SPNEGO token
+            byte[] responseToken = context.acceptSecContext(kerberosToken, 0, kerberosToken.length);
+            
+            if (context.isEstablished()) {
+                // Extract the client principal name
+                GSSName clientName = context.getSrcName();
+                String fullPrincipal = clientName.toString();
+                
+                log.debug("Extracted Kerberos principal: {}", fullPrincipal);
+                
+                // Extract username from principal (user@REALM.COM -> user)
+                if (fullPrincipal.contains("@")) {
+                    return fullPrincipal.substring(0, fullPrincipal.indexOf("@"));
+                }
+                return fullPrincipal;
+            } else {
+                throw new AuthenticationServiceException("Failed to establish GSS context");
+            }
+            
+        } catch (GSSException e) {
+            log.error("Failed to extract username from Kerberos token", e);
+            throw new AuthenticationServiceException("Failed to process Kerberos token", e);
+        }
     }
 
     @Override

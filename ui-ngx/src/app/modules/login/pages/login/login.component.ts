@@ -80,4 +80,9 @@ export class LoginComponent extends PageComponent implements OnInit {
     }
     return oauth2Client.url + result;
   }
+
+  onKerberosLoginSuccess(): void {
+    // Kerberos login was successful, the auth service already handled token storage
+    // No additional action needed as the app will automatically redirect
+  }
 }

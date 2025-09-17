@@ -3833,7 +3833,17 @@
         "activation-link-expired": "Activation link has expired",
         "activation-link-expired-message": "The link to activate your profile has expired. You can return to the login page to receive a new email.",
         "reset-password-link-expired": "Password reset link has expired",
-        "reset-password-link-expired-message": "The link to reset your password has expired. You can return to the login page to receive a new email."
+        "reset-password-link-expired-message": "The link to reset your password has expired. You can return to the login page to receive a new email.",
+        "kerberos-authentication": "Kerberos Authentication",
+        "kerberos-sso": "Login with Kerberos SSO",
+        "kerberos-sso-help": "Single Sign-On using your domain credentials",
+        "manual-kerberos-auth": "Manual Kerberos Authentication",
+        "manual-kerberos-auth-description": "Enter Kerberos credentials manually",
+        "kerberos-username": "Kerberos Principal",
+        "kerberos-token": "Kerberos Token",
+        "kerberos-token-hint": "Base64-encoded Kerberos token",
+        "kerberos-token-required": "Kerberos token is required",
+        "authenticate-kerberos": "Authenticate with Kerberos"
     },
     "markdown": {
         "edit": "Edit",

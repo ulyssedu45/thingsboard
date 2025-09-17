@@ -37,6 +37,7 @@ export SECURITY_KERBEROS_SERVICE_PRINCIPAL="HTTP/thingsboard.company.com@COMPANY
 export SECURITY_KERBEROS_KEYTAB_LOCATION="/etc/thingsboard/krb5.keytab"
 export SECURITY_KERBEROS_REALM="COMPANY.COM"
 export SECURITY_KERBEROS_KDC="kdc.company.com"
+export SECURITY_KERBEROS_DEBUG="false"
 ```
 
 ## Prerequisites
@@ -85,10 +86,24 @@ Ensure your ThingsBoard server has a proper `/etc/krb5.conf` file:
 
 ### 1. SPNEGO Authentication (Browser-based)
 
-For web browsers that support SPNEGO:
+For web browsers that support SPNEGO (Single Sign-On):
 
 1. Configure your browser to enable SPNEGO for the ThingsBoard domain
-2. Access ThingsBoard normally - authentication will happen automatically
+2. Access ThingsBoard login page
+3. Click the "Login with Kerberos SSO" button - authentication will happen automatically
+
+**Browser Configuration:**
+
+For Chrome/Edge:
+```bash
+# Add ThingsBoard domain to trusted sites for automatic authentication
+chrome --auth-server-whitelist="thingsboard.company.com"
+```
+
+For Firefox:
+1. Go to `about:config`
+2. Set `network.negotiate-auth.trusted-uris` to `thingsboard.company.com`
+3. Set `network.negotiate-auth.delegation-uris` to `thingsboard.company.com`
 
 ### 2. REST API Authentication
 
@@ -123,6 +138,16 @@ You can also use the standard HTTP Negotiate authentication:
 POST /api/auth/kerberos
 Authorization: Negotiate YIIEfgYJKoZIhvcSAQICAQBu...
 ```
+
+## User Interface
+
+ThingsBoard provides an integrated Kerberos authentication interface on the login page:
+
+1. **SPNEGO/SSO Button**: Click "Login with Kerberos SSO" for automatic authentication using your domain credentials
+2. **Manual Authentication**: Expand the "Manual Kerberos Authentication" section to enter credentials manually
+3. **Status Check**: The interface automatically detects if Kerberos is enabled on the server
+
+The Kerberos login options appear below the standard username/password form when Kerberos authentication is enabled.
 
 ## User Mapping
 

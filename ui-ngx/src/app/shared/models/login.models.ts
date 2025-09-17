@@ -21,6 +21,11 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface KerberosLoginRequest {
+  username: string;
+  kerberosToken: string;
+}
+
 export interface PublicLoginRequest {
   publicId: string;
 }

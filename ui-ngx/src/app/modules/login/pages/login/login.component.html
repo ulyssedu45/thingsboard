@@ -64,6 +64,8 @@
               <button mat-raised-button color="accent" [disabled]="(isLoading$ | async)"
                       type="submit">{{ 'login.login' | translate }}</button>
             </div>
+            <!-- Kerberos Authentication -->
+            <tb-kerberos-login (kerberosLoginSuccess)="onKerberosLoginSuccess()"></tb-kerberos-login>
           </div>
         </fieldset>
       </form>

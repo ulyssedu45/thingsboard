@@ -24,7 +24,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.thingsboard.server.service.security.auth.kerberos.KerberosAuthenticationToken;
-import org.springframework.security.kerberos.authentication.sun.SunJaasKerberosClient;
+import org.springframework.security.kerberos.authentication.sun.SunJaasKerberosTicketValidator;
+import org.springframework.security.kerberos.authentication.KerberosServiceRequestToken;
 import org.springframework.stereotype.Component;
 import org.thingsboard.server.common.data.User;
 import org.thingsboard.server.common.data.audit.ActionType;
@@ -46,28 +47,33 @@ public class KerberosAuthenticationProvider implements AuthenticationProvider {
 
     private final UserService userService;
     private final SystemSecurityService systemSecurityService;
-    private final SunJaasKerberosClient kerberosClient;
+    private final SunJaasKerberosTicketValidator kerberosTicketValidator;
 
     @Autowired
     public KerberosAuthenticationProvider(final UserService userService,
                                          final SystemSecurityService systemSecurityService,
-                                         final SunJaasKerberosClient kerberosClient) {
+                                         final SunJaasKerberosTicketValidator kerberosTicketValidator) {
         this.userService = userService;
         this.systemSecurityService = systemSecurityService;
-        this.kerberosClient = kerberosClient;
+        this.kerberosTicketValidator = kerberosTicketValidator;
     }
 
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
         KerberosAuthenticationToken kerberosToken = (KerberosAuthenticationToken) authentication;
         String username = (String) kerberosToken.getPrincipal();
+        String token = (String) kerberosToken.getCredentials();
         
         try {
-            // Validate Kerberos token
-            String validatedUsername = kerberosClient.login(username, (String) kerberosToken.getCredentials());
+            // Validate Kerberos token using Spring Security validator
+            KerberosServiceRequestToken validatedToken = new KerberosServiceRequestToken(token);
+            KerberosServiceRequestToken result = kerberosTicketValidator.validateTicket(validatedToken);
             
-            // Extract username from Kerberos principal (remove realm if present)
+            // Extract username from validated token
+            String validatedUsername = result.getUsername();
             String cleanUsername = extractUsername(validatedUsername);
+            
+            log.debug("Kerberos authentication successful for user: {}", cleanUsername);
             
             // Find user in ThingsBoard database
             SecurityUser securityUser = authenticateByUsername(cleanUsername);

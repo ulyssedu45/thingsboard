@@ -1,0 +1,110 @@
+/**
+ * Copyright © 2016-2025 The Thingsboard Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+.kerberos-login-container {
+  width: 100%;
+  margin-top: 20px;
+
+  .container-divider {
+    display: flex;
+    align-items: center;
+    margin: 20px 0;
+
+    .line {
+      flex: 1;
+    }
+
+    .text {
+      margin: 0 15px;
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 12px;
+      font-weight: 500;
+    }
+  }
+
+  .spnego-login-section {
+    text-align: center;
+    margin: 20px 0;
+
+    .kerberos-spnego-button {
+      width: 100%;
+      height: 48px;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+
+      mat-icon {
+        font-size: 20px;
+      }
+    }
+
+    .spnego-help-text {
+      margin-top: 8px;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.6);
+      text-align: center;
+    }
+  }
+
+  .manual-kerberos-section {
+    margin-top: 15px;
+
+    mat-expansion-panel {
+      background: rgba(255, 255, 255, 0.05);
+      color: white;
+
+      mat-expansion-panel-header {
+        color: white;
+
+        mat-panel-title {
+          color: white;
+          font-weight: 500;
+        }
+
+        mat-panel-description {
+          color: rgba(255, 255, 255, 0.7);
+        }
+      }
+    }
+
+    form {
+      padding: 20px 0;
+
+      mat-form-field {
+        width: 100%;
+        margin-bottom: 15px;
+
+        textarea {
+          font-family: 'Roboto Mono', monospace;
+          font-size: 12px;
+        }
+      }
+
+      .kerberos-actions {
+        display: flex;
+        justify-content: center;
+        margin-top: 20px;
+
+        button {
+          min-width: 200px;
+          height: 44px;
+        }
+      }
+    }
+  }
+}

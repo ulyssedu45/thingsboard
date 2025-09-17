@@ -172,6 +172,8 @@ security:
     realm: "${SECURITY_KERBEROS_REALM:REALM.COM}"
     # KDC (Key Distribution Center) hostname
     kdc: "${SECURITY_KERBEROS_KDC:localhost}"
+    # Enable/Disable debug logging for Kerberos authentication
+    debug: "${SECURITY_KERBEROS_DEBUG:false}"
   oauth2:
     # Redirect URL where access code from external user management system will be processed
     loginProcessingUrl: "${SECURITY_OAUTH2_LOGIN_PROCESSING_URL:/login/oauth2/code/}"

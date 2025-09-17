@@ -16,14 +16,16 @@
 
 import { Injectable, NgZone } from '@angular/core';
 import { JwtHelperService } from '@auth0/angular-jwt';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 
 import { Observable, of, ReplaySubject, throwError } from 'rxjs';
 import { catchError, map, mergeMap, tap } from 'rxjs/operators';
 
-import { LoginRequest, LoginResponse, PublicLoginRequest } from '@shared/models/login.models';
+import { LoginRequest, LoginResponse, PublicLoginRequest, KerberosLoginRequest } from '@shared/models/login.models';
 import { Router, UrlTree } from '@angular/router';
 import { defaultHttpOptions, defaultHttpOptionsFromConfig, RequestConfig } from '../http/http-utils';
+import { InterceptorHttpParams } from '../interceptors/interceptor-http-params';
+import { InterceptorConfig } from '../interceptors/interceptor-config';
 import { UserService } from '../http/user.service';
 import { Store } from '@ngrx/store';
 import { AppState } from '../core.state';
@@ -119,6 +121,39 @@ export class AuthService {
           }
         }
       ));
+  }
+
+  public kerberosLogin(kerberosRequest: KerberosLoginRequest): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>('/api/auth/kerberos', kerberosRequest, defaultHttpOptions()).pipe(
+      tap((loginResponse: LoginResponse) => {
+          this.setUserFromJwtToken(loginResponse.token, loginResponse.refreshToken, true);
+          if (loginResponse.scope === Authority.PRE_VERIFICATION_TOKEN) {
+            this.router.navigateByUrl(`login/mfa`);
+          }
+        }
+      ));
+  }
+
+  public kerberosSpnegoLogin(): Observable<LoginResponse> {
+    const options = {
+      headers: new HttpHeaders({
+        'Content-Type': 'application/json',
+        'Authorization': 'Negotiate'
+      }),
+      params: new InterceptorHttpParams(new InterceptorConfig(false, false, false))
+    };
+    return this.http.post<LoginResponse>('/api/auth/kerberos', null, options).pipe(
+      tap((loginResponse: LoginResponse) => {
+          this.setUserFromJwtToken(loginResponse.token, loginResponse.refreshToken, true);
+          if (loginResponse.scope === Authority.PRE_VERIFICATION_TOKEN) {
+            this.router.navigateByUrl(`login/mfa`);
+          }
+        }
+      ));
+  }
+
+  public checkKerberosStatus(): Observable<any> {
+    return this.http.get('/api/auth/kerberos/status', defaultHttpOptions());
   }
 
   public checkTwoFaVerificationCode(providerType: TwoFactorAuthProviderType, verificationCode: number): Observable<LoginResponse> {

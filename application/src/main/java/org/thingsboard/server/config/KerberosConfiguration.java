@@ -41,19 +41,22 @@ public class KerberosConfiguration {
     @Value("${security.kerberos.realm:REALM.COM}")
     private String realm;
 
+    @Value("${security.kerberos.debug:false}")
+    private boolean debug;
+
     @Bean
     public SunJaasKerberosTicketValidator sunJaasKerberosTicketValidator() {
         SunJaasKerberosTicketValidator ticketValidator = new SunJaasKerberosTicketValidator();
         ticketValidator.setServicePrincipal(servicePrincipal);
         ticketValidator.setKeyTabLocation(new FileSystemResource(keytabLocation));
-        ticketValidator.setDebug(true);
+        ticketValidator.setDebug(debug);
         return ticketValidator;
     }
 
     @Bean
     public SunJaasKerberosClient sunJaasKerberosClient() {
         SunJaasKerberosClient client = new SunJaasKerberosClient();
-        client.setDebug(true);
+        client.setDebug(debug);
         return client;
     }
 }
