@@ -56,6 +56,8 @@ import org.thingsboard.server.service.security.auth.jwt.SkipPathRequestMatcher;
 import org.thingsboard.server.service.security.auth.oauth2.HttpCookieOAuth2AuthorizationRequestRepository;
 import org.thingsboard.server.service.security.auth.pat.ApiKeyAuthenticationProvider;
 import org.thingsboard.server.service.security.auth.pat.ApiKeyTokenAuthenticationProcessingFilter;
+import org.thingsboard.server.service.security.auth.kerberos.KerberosAuthenticationService;
+import org.thingsboard.server.service.security.auth.kerberos.SpnegoAuthenticationProcessingFilter;
 import org.thingsboard.server.service.security.auth.rest.RestAuthenticationProvider;
 import org.thingsboard.server.service.security.auth.rest.RestLoginProcessingFilter;
 import org.thingsboard.server.service.security.auth.rest.RestPublicLoginProcessingFilter;
@@ -88,6 +90,8 @@ public class ThingsboardSecurityConfiguration {
     public static final String WS_ENTRY_POINT = "/api/ws/**";
     public static final String MAIL_OAUTH2_PROCESSING_ENTRY_POINT = "/api/admin/mail/oauth2/code";
     public static final String DEVICE_CONNECTIVITY_CERTIFICATE_DOWNLOAD_ENTRY_POINT = "/api/device-connectivity/*/certificate/download";
+    public static final String KERBEROS_LOGIN_ENTRY_POINT = "/api/noauth/kerberos/login";
+    public static final String SPNEGO_ENTRY_POINT = "/api/auth/spnego";
 
     @Value("${server.http.max_payload_size:/api/image*/**=52428800;/api/resource/**=52428800;/api/**=16777216}")
     private String maxPayloadSizeConfig;
@@ -142,6 +146,9 @@ public class ThingsboardSecurityConfiguration {
 
     @Autowired
     private AuthExceptionHandler authExceptionHandler;
+
+    @Autowired(required = false)
+    private KerberosAuthenticationService kerberosAuthenticationService;
 
     @Bean
     protected PayloadSizeFilter payloadSizeFilter() {
@@ -201,7 +208,9 @@ public class ThingsboardSecurityConfiguration {
                         PUBLIC_LOGIN_ENTRY_POINT,
                         DEVICE_API_ENTRY_POINT,
                         MAIL_OAUTH2_PROCESSING_ENTRY_POINT,
-                        DEVICE_CONNECTIVITY_CERTIFICATE_DOWNLOAD_ENTRY_POINT)).toList();
+                        DEVICE_CONNECTIVITY_CERTIFICATE_DOWNLOAD_ENTRY_POINT,
+                        KERBEROS_LOGIN_ENTRY_POINT,
+                        SPNEGO_ENTRY_POINT)).toList();
         return new SkipPathRequestMatcher(pathsToSkip, TOKEN_BASED_AUTH_ENTRY_POINT);
     }
 
@@ -257,6 +266,8 @@ public class ThingsboardSecurityConfiguration {
                                 TOKEN_REFRESH_ENTRY_POINT, // Token refresh end-point
                                 MAIL_OAUTH2_PROCESSING_ENTRY_POINT, // Mail oauth2 code processing url
                                 DEVICE_CONNECTIVITY_CERTIFICATE_DOWNLOAD_ENTRY_POINT, // Device connectivity certificate (public)
+                                KERBEROS_LOGIN_ENTRY_POINT, // Kerberos login end-point
+                                SPNEGO_ENTRY_POINT, // SPNEGO/Negotiate SSO end-point
                                 WS_ENTRY_POINT).permitAll() // Protected WebSocket API End-points
                         .requestMatchers(TOKEN_BASED_AUTH_ENTRY_POINT).authenticated() // Protected API End-points
                         .anyRequest().permitAll())
@@ -269,6 +280,10 @@ public class ThingsboardSecurityConfiguration {
                 .addFilterBefore(payloadSizeFilter(), UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(rateLimitProcessingFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(authExceptionHandler, buildRestLoginProcessingFilter().getClass());
+        if (kerberosAuthenticationService != null) {
+            http.addFilterBefore(new SpnegoAuthenticationProcessingFilter(kerberosAuthenticationService),
+                    UsernamePasswordAuthenticationFilter.class);
+        }
         if (oauth2Configuration != null) {
             http.oauth2Login(login -> login
                     .authorizationEndpoint(config -> config

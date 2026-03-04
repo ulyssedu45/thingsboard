@@ -178,6 +178,23 @@ security:
     path: "${SECURITY_JAVA_CACERTS_PATH:${java.home}/lib/security/cacerts}"
     # The password of the cacerts keystore file
     password: "${SECURITY_JAVA_CACERTS_PASSWORD:changeit}"
+  kerberos:
+    # Enable/disable Kerberos authentication
+    enabled: "${SECURITY_KERBEROS_ENABLED:false}"
+    # Kerberos Key Distribution Center (KDC) hostname
+    kdc: "${SECURITY_KERBEROS_KDC:}"
+    # Kerberos realm (e.g., EXAMPLE.COM)
+    realm: "${SECURITY_KERBEROS_REALM:}"
+    # Service principal for SPNEGO (e.g., HTTP/thingsboard.example.com@EXAMPLE.COM)
+    servicePrincipal: "${SECURITY_KERBEROS_SERVICE_PRINCIPAL:}"
+    # Path to the keytab file for the service principal
+    keytabPath: "${SECURITY_KERBEROS_KEYTAB_PATH:}"
+    # Default tenant ID for auto-provisioned Kerberos users
+    defaultTenantId: "${SECURITY_KERBEROS_DEFAULT_TENANT_ID:}"
+    # Enable SPNEGO/Negotiate SSO
+    spnegoEnabled: "${SECURITY_KERBEROS_SPNEGO_ENABLED:false}"
+    # Auto-provision users that authenticate via Kerberos but don't exist in ThingsBoard
+    userAutoProvisioning: "${SECURITY_KERBEROS_USER_AUTO_PROVISIONING:false}"
 
 # Mail settings parameters
 mail:
