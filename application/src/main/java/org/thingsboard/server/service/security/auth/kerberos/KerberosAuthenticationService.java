@@ -15,7 +15,6 @@
  */
 package org.thingsboard.server.service.security.auth.kerberos;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSCredential;
@@ -46,14 +45,12 @@ import javax.security.auth.login.Configuration;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
 import java.security.PrivilegedAction;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
 @Service
 @Slf4j
-@RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "security.kerberos", value = "enabled", havingValue = "true")
 public class KerberosAuthenticationService {
 
@@ -68,6 +65,27 @@ public class KerberosAuthenticationService {
             SPNEGO_OID = new Oid("1.3.6.1.5.5.2");
         } catch (GSSException e) {
             throw new IllegalStateException("Failed to create SPNEGO OID", e);
+        }
+    }
+
+    public KerberosAuthenticationService(KerberosProperties kerberosProperties,
+                                         UserService userService,
+                                         JwtTokenFactory tokenFactory) {
+        this.kerberosProperties = kerberosProperties;
+        this.userService = userService;
+        this.tokenFactory = tokenFactory;
+        initKerberosSystemProperties();
+    }
+
+    /**
+     * Set Kerberos system properties once at startup to avoid thread-safety issues.
+     */
+    private void initKerberosSystemProperties() {
+        if (kerberosProperties.getKdc() != null && !kerberosProperties.getKdc().isBlank()) {
+            System.setProperty("java.security.krb5.kdc", kerberosProperties.getKdc());
+        }
+        if (kerberosProperties.getRealm() != null && !kerberosProperties.getRealm().isBlank()) {
+            System.setProperty("java.security.krb5.realm", kerberosProperties.getRealm());
         }
     }
 
@@ -211,12 +229,6 @@ public class KerberosAuthenticationService {
                 options.put("storeKey", "true");
                 options.put("isInitiator", "true");
                 options.put("refreshKrb5Config", "true");
-                if (kerberosProperties.getKdc() != null && !kerberosProperties.getKdc().isBlank()) {
-                    System.setProperty("java.security.krb5.kdc", kerberosProperties.getKdc());
-                }
-                if (kerberosProperties.getRealm() != null && !kerberosProperties.getRealm().isBlank()) {
-                    System.setProperty("java.security.krb5.realm", kerberosProperties.getRealm());
-                }
                 return new AppConfigurationEntry[]{
                         new AppConfigurationEntry(
                                 "com.sun.security.auth.module.Krb5LoginModule",
@@ -251,12 +263,6 @@ public class KerberosAuthenticationService {
                 options.put("storeKey", "true");
                 options.put("isInitiator", "false");
                 options.put("refreshKrb5Config", "true");
-                if (kerberosProperties.getKdc() != null && !kerberosProperties.getKdc().isBlank()) {
-                    System.setProperty("java.security.krb5.kdc", kerberosProperties.getKdc());
-                }
-                if (kerberosProperties.getRealm() != null && !kerberosProperties.getRealm().isBlank()) {
-                    System.setProperty("java.security.krb5.realm", kerberosProperties.getRealm());
-                }
                 return new AppConfigurationEntry[]{
                         new AppConfigurationEntry(
                                 "com.sun.security.auth.module.Krb5LoginModule",
